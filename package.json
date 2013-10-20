@@ -1,0 +1,23 @@
+{
+  "name": "levelup-cache",
+  "version": "0.0.1",
+  "description": "Use LevelUP to cache remote data",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {
+    "tap": "~0.4.4",
+    "memdown": "~0.5.1"
+  },
+  "scripts": {
+    "test": "tap ./test"
+  },
+  "dependencies": {
+    "levelup": "~0.17.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TehShrike/levelup-cache.git"
+  }
+}
