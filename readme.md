@@ -8,5 +8,8 @@ Just provide a getter function and lookup all keys with a single get call.
 - Return a value as quickly as possible, no matter how old
 - Automatically call the getter function to check for new values every so often
 - Emit events when value changes are detected
-- Browser compatability via [Browserify](https://github.com/substack/node-browserify)
 
+# Todo
+- Tests to make sure that all callbacks get called when a remote value is returned
+- Test to make sure values/expirations persist across instantiations
+- Add events, and tests to go with 'em

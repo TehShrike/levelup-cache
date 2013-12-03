@@ -1,11 +1,13 @@
 var test = require("tap").test
 var newCache = require("../")
+var levelup = require('levelup')
 
-var db = require('levelup')('/does/not/matter', { 
-	db: require('memdown') 
-})
 
 var TestingCache = function(source, options) {
+	var db = levelup('/does/not/matter', {
+		db: require('memdown')
+	})
+
 	source = source || {
 		source1: "one",
 		source2: "two"
@@ -16,8 +18,10 @@ var TestingCache = function(source, options) {
 		cb(false, source[key])
 	}
 
-	this.source = source
-	this.get = newCache(db, getter, options)
+	var cache = newCache(db, getter, options)
+	cache.source = source
+
+	return cache
 }
 
 test("getting", function(t) {
@@ -29,6 +33,7 @@ test("getting", function(t) {
 
 		cache.get("source1", function(err, value) {
 			t.equal(value, "one", "The second get (returning the cached value) succeeds")
+			cache.stop()
 		})
 	})
 })
@@ -48,6 +53,7 @@ test("getting updated value", function(t) {
 		setTimeout(function() {
 			cache.get("source1", function(err, value) {
 				t.equal(value, "haha it's different now", "the second get call after the remote value was changed")
+				cache.stop()
 			})
 		}, 6000)
 	})
