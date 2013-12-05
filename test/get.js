@@ -8,14 +8,17 @@ var TestingCache = function(source, options) {
 		db: require('memdown')
 	})
 
+	var delay = options ? (options.delay || 10) : 10
+
 	source = source || {
 		source1: "one",
 		source2: "two"
 	}
 
 	var getter = function(key, cb) {
-		console.log("getter called for " + key)
-		cb(false, source[key])
+		setTimeout(function() {
+			cb(false, source[key])
+		}, delay)
 	}
 
 	var cache = newCache(db, getter, options)
@@ -40,7 +43,7 @@ test("getting", function(t) {
 
 test("getting updated value", function(t) {
 	t.plan(3)
-	var cache = new TestingCache(false, { refreshEvery: 5 })
+	var cache = new TestingCache(false, { refreshEvery: 1 })
 
 	cache.get("source1", function(err, value) {
 		t.equal(value, "one", "The first get (requiring calling the get function) succeeds")
@@ -55,6 +58,41 @@ test("getting updated value", function(t) {
 				t.equal(value, "haha it's different now", "the second get call after the remote value was changed")
 				cache.stop()
 			})
-		}, 6000)
+		}, 3000)
 	})
+})
+
+test("All callbacks called when getter returns", function(t) {
+	var db = levelup('/does/not/matter', { db: require('memdown') })
+
+	var source = {
+		source1: "one",
+		source2: "two"
+	}
+
+	function getter(key, cb) {
+		setTimeout(function() {
+			cb(false, source[key])
+		}, 100)
+	}
+
+	var cache = newCache(db, getter)
+
+	t.plan(3)
+
+	var soFar = 0
+	function testResponse(expected) {
+		return function(err, value) {
+			t.equal(expected, value, 'The got value is ' + expected + ' as expected')
+
+			soFar = soFar + 1
+			if (soFar === 3) {
+				cache.stop()
+				t.end()
+			}
+		}
+	}
+	cache.get('source1', testResponse('one'))
+	cache.get('source2', testResponse('two'))
+	cache.get('source1', testResponse('one'))
 })
