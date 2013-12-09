@@ -13,10 +13,10 @@ test("Events are emitted when values are reloaded", function(t) {
 	function getter(key, cb) {
 		setTimeout(function() {
 			cb(false, source[key])
-		}, 100)
+		}, 10)
 	}
 
-	var cache = newCache(db, getter, { refreshEvery: 1 })
+	var cache = newCache(db, getter, { refreshEvery: 1000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
 
 	var eventCalls = 2 * 2 * 2 // Each event triggers 2 tests. There are 2 keys, and each one should be loaded twice (once on the original load, and once automatically after 1 second)
 	var responseCalls = 3
@@ -41,7 +41,7 @@ test("Events are emitted when values are reloaded", function(t) {
 	setTimeout(function() {
 		cache.stop()
 		t.end()
-	}, 2200) // The values should have been reloaded after the second check around ~2000 ms
+	}, 2100) // The values should have been reloaded after the second check around ~2020 ms
 })
 
 test("Only expired values are reloaded", function(t) {
@@ -55,10 +55,10 @@ test("Only expired values are reloaded", function(t) {
 	function getter(key, cb) {
 		setTimeout(function() {
 			cb(false, source[key])
-		}, 100)
+		}, 10)
 	}
 
-	var cache = newCache(db, getter, { refreshEvery: 1 })
+	var cache = newCache(db, getter, { refreshEvery: 1000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
 	// Won't refresh the first time, because there won't be anything older than a second when the cache
 	// has only been around for a second
 
@@ -77,10 +77,10 @@ test("Only expired values are reloaded", function(t) {
 			})
 		})
 
-	}, 1100)
+	}, 900)
 
 	setTimeout(function() {
 		cache.stop()
 		t.end()
-	}, 2500)
+	}, 1500)
 })

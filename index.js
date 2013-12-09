@@ -2,74 +2,58 @@ var StringMap = require('stringmap')
 var sublevel = require('level-sublevel')
 var ASQ = require('asynquence')
 var EventEmitter = require('events').EventEmitter
+var Expirer = require('expire-unused-keys')
 
 module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
 	"use strict"
-	var db = sublevel(levelUpDb)
-	var items = db.sublevel('items')
-	var refreshTimestamps = db.sublevel('expirations')
-	var currentlyRefreshing = new StringMap()
-	var refreshTimer = null
-	var cache = new EventEmitter()
 
 	options = options || {}
 
 	options = {
-		refreshEvery: options.refreshEvery || 60 * 60 * 12
+		refreshEvery: options.refreshEvery || 12 * 60 * 60 * 1000,
+		checkToSeeIfItemsNeedToBeRefreshedEvery: options.checkToSeeIfItemsNeedToBeRefreshedEvery || 1000,
+		ttl: (options.ttl || 7 * 24 * 60 * 60 * 1000) // SEVEN DAYS OH MAN
 	}
 
-	var refreshMs = options.refreshEvery * 1000
+	var db = sublevel(levelUpDb)
+	var items = db.sublevel('items')
+	var itemExpirer = new Expirer(options.ttl, db.sublevel('item-expirations'), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var refreshTimestamps = new Expirer(options.refreshEvery, db.sublevel('refresh'), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var currentlyRefreshing = new StringMap()
+	var cache = new EventEmitter()
 
-	function refreshValueIfNecessary(key, lastRefreshed) {
-		if (typeof lastRefreshed === 'undefined') {
-			refreshTimestamps.get(key, function(err, value) {
-				if (!err) {
-					refreshValueIfNecessary(key, value)
-				}
-			})
-		} else {
-			var now = new Date().getTime()
-			lastRefreshed = parseInt(lastRefreshed)
-			var refreshAfter = lastRefreshed + refreshMs
-			var needToRefresh = refreshAfter <= now
-			if (needToRefresh) {
-				getRemoteValue(key)
-			}
-		}
-	}
-
-	function refresh() {
-		refreshTimestamps.createReadStream().on('data', function(data) {
-			refreshValueIfNecessary(data.key, data.value)
-		})
-	}
-
-	function start() {
-		if (!refreshTimer) {
-			refresh()
-			refreshTimer = setInterval(refresh, refreshMs)
-		}
-	}
+	refreshTimestamps.on('expire', getRemoteValue)
+	itemExpirer.on('expire', expireItem)
 
 	function stop() {
-		if (refreshTimer) {
-			clearInterval(refreshTimer)
-			refreshTimer = null
+		refreshTimestamps.stop()
+		itemExpirer.stop()
+	}
+
+	function expireItem(key) {
+		items.del(key)
+		refreshTimestamps.forget(key)
+		var inTheMidstOfRefreshing = currentlyRefreshing.get(key)
+		if (inTheMidstOfRefreshing) {
+			inTheMidstOfRefreshing.abort()
+			currentlyRefreshing.remove(key)
 		}
 	}
 
-	start()
-
+	// A getRemoteValue call without a callback function refreshes the cached value
 	function getRemoteValue(key, cb) {
 		var sequence = currentlyRefreshing.get(key)
 
 		if (!sequence) {
 			sequence = ASQ(function(done) {
 				getter(key, function(err, value) {
-					if (!err) {
+					// Make sure the sequence wasn't pulled out from under us
+					if (!err && currentlyRefreshing.has(key)) {
 						items.put(key, value)
+						itemExpirer.touch(key)
+						refreshTimestamps.touch(key)
+
 						cache.emit('loaded', key, value)
-						refreshTimestamps.put(key, new Date().getTime())
 					}
 					done(err, value)
 				})
@@ -89,18 +73,14 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		}
 	}
 
-	cache.start = start
 	cache.stop = stop
 	cache.get = function getFromCache(key, cb) {
-		cb = cb || function noop() {}
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {
 				getRemoteValue(key, cb)
-			} else if (err) {
-				cb(err)
-			} else {
-				refreshValueIfNecessary(key)
-				cb(null, value)
+			} else if (cb) {
+				itemExpirer.touch(key)
+				cb(err, value)
 			}
 		})
 	}

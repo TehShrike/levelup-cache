@@ -8,13 +8,13 @@
   },
   "devDependencies": {
     "tap": "~0.4.4",
+    "levelup": "~0.17.0",
     "memdown": "~0.5.1"
   },
   "scripts": {
     "test": "tap ./test"
   },
   "dependencies": {
-    "levelup": "~0.17.0",
     "stringmap": "~0.2.2",
     "level-sublevel": "~5.1.1",
     "asynquence": "~0.1.1-a"

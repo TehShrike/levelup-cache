@@ -43,7 +43,7 @@ test("getting", function(t) {
 
 test("getting updated value", function(t) {
 	t.plan(3)
-	var cache = new TestingCache(false, { refreshEvery: 1 })
+	var cache = new TestingCache(false, { refreshEvery: 1000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
 
 	cache.get("source1", function(err, value) {
 		t.equal(value, "one", "The first get (requiring calling the get function) succeeds")

@@ -19,14 +19,14 @@ test("Values and expirations persist across instantiations via levelup", functio
 			}, 10)
 		}
 
-		var cache = newCache(db, getter, { refreshEvery: 1 })
+		var cache = newCache(db, getter, { refreshEvery: 1000 })
 
 		cache.get('source1')
 
 		setTimeout(function() {
 			cache.get('source2', function() {
 				cache.stop()
-				setTimeout(done, 200)  // We'll let source2 sit around in the cash for a few hundred ms before moving on
+				setTimeout(done, 10)  // We'll let source2 sit around in the cache for a few ms before moving on
 			})
 		}, 900)
 	}).then(function(done) {
@@ -35,7 +35,7 @@ test("Values and expirations persist across instantiations via levelup", functio
 				cb(false, "HAHA NEW VALUE")
 			}, 10)
 		}
-		var cache = newCache(db, getter, { refreshEvery: 1 })
+		var cache = newCache(db, getter, { refreshEvery: 1000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
 		t.plan(4)
 
 		// source1 will need to be loaded from the server, but source2 was just loaded, it should be grabbed from the levelup store
