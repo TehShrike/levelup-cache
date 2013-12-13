@@ -1,9 +1,9 @@
 var test = require("tap").test
 var newCache = require("../")
-var levelup = require('levelup')
+var levelmem = require('level-mem')
 
 test("Events are emitted when values are reloaded", function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",
@@ -45,7 +45,7 @@ test("Events are emitted when values are reloaded", function(t) {
 })
 
 test("Only expired values are reloaded", function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",

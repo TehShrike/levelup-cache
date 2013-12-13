@@ -1,12 +1,10 @@
 var test = require("tap").test
 var newCache = require("../")
-var levelup = require('levelup')
+var levelmem = require('level-mem')
 var ASQ = require('asynquence')
 
 var TestingCache = function(source, options) {
-	var db = levelup('/does/not/matter', {
-		db: require('memdown')
-	})
+	var db = levelmem()
 
 	var delay = options ? (options.delay || 10) : 10
 
@@ -63,7 +61,7 @@ test("getting updated value", function(t) {
 })
 
 test("All callbacks called when getter returns", function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",
@@ -98,7 +96,7 @@ test("All callbacks called when getter returns", function(t) {
 })
 
 test("Remote get only happens once for many gets", function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",

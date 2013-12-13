@@ -1,9 +1,9 @@
 var test = require("tap").test
 var newCache = require("../")
-var levelup = require('levelup')
+var levelmem = require('level-mem')
 
 test('items are dropped from the cache after being fetched', function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",
@@ -36,7 +36,7 @@ test('items are dropped from the cache after being fetched', function(t) {
 })
 
 test('race condition: dropping an item from the cache while it is still being refreshed', function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var start = new Date().getTime()
 

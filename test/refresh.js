@@ -1,9 +1,9 @@
 var test = require("tap").test
 var newCache = require("../")
-var levelup = require('levelup')
+var levelmem = require('level-mem')
 
 test('refresh should cause a remote get', function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	var source = {
 		source1: "one",

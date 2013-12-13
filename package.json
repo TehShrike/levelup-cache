@@ -8,16 +8,16 @@
 	},
 	"devDependencies": {
 		"tap": "~0.4.4",
-		"levelup": "~0.17.0",
-		"memdown": "~0.5.1"
+		"level-mem": "~0.18.0"
 	},
 	"scripts": {
 		"test": "tap ./test"
 	},
 	"dependencies": {
 		"stringmap": "~0.2.2",
-		"level-sublevel": "~5.1.1",
-		"asynquence": "~0.1.1-a"
+		"level-sublevel": "~5.2.0",
+		"asynquence": "~0.1.1-a",
+		"expire-unused-keys": "~0.2.0"
 	},
 	"peerDependencies": {
 		"levelup": "~0.18.0"

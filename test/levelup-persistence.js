@@ -1,11 +1,11 @@
 var test = require("tap").test
 var newCache = require("../")
-var levelup = require('levelup')
+var levelmem = require('level-mem')
 var ASQ = require('asynquence')
 
 // Similar to events.js "Only expired values are reloaded" but with multiple cache instantiations
 test("Values and expirations persist across instantiations via levelup", function(t) {
-	var db = levelup('/does/not/matter', { db: require('memdown') })
+	var db = levelmem()
 
 	ASQ(function(done) {
 		var source = {
