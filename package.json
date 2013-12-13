@@ -1,26 +1,29 @@
 {
-  "name": "levelup-cache",
-  "version": "0.0.1",
-  "description": "Use LevelUP to cache remote data",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
-  "devDependencies": {
-    "tap": "~0.4.4",
-    "levelup": "~0.17.0",
-    "memdown": "~0.5.1"
-  },
-  "scripts": {
-    "test": "tap ./test"
-  },
-  "dependencies": {
-    "stringmap": "~0.2.2",
-    "level-sublevel": "~5.1.1",
-    "asynquence": "~0.1.1-a"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/TehShrike/levelup-cache.git"
-  }
+	"name": "levelup-cache",
+	"version": "0.0.1",
+	"description": "Use LevelUP to cache remote data",
+	"main": "index.js",
+	"directories": {
+		"test": "test"
+	},
+	"devDependencies": {
+		"tap": "~0.4.4",
+		"levelup": "~0.17.0",
+		"memdown": "~0.5.1"
+	},
+	"scripts": {
+		"test": "tap ./test"
+	},
+	"dependencies": {
+		"stringmap": "~0.2.2",
+		"level-sublevel": "~5.1.1",
+		"asynquence": "~0.1.1-a"
+	},
+	"peerDependencies": {
+		"levelup": "~0.18.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/TehShrike/levelup-cache.git"
+	}
 }
