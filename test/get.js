@@ -1,7 +1,7 @@
 var test = require("tap").test
 var newCache = require("../")
 var levelup = require('levelup')
-
+var ASQ = require('asynquence')
 
 var TestingCache = function(source, options) {
 	var db = levelup('/does/not/matter', {
@@ -95,4 +95,43 @@ test("All callbacks called when getter returns", function(t) {
 	cache.get('source1', testResponse('one'))
 	cache.get('source2', testResponse('two'))
 	cache.get('source1', testResponse('one'))
+})
+
+test("Remote get only happens once for many gets", function(t) {
+	var db = levelup('/does/not/matter', { db: require('memdown') })
+
+	var source = {
+		source1: "one",
+		source2: "two"
+	}
+
+	var getterCalled = false
+	function getter(key, cb) {
+		t.notOk(getterCalled, 'Getter has not been called before')
+		getterCalled = true
+		setTimeout(function() {
+			cb(!getterCalled, source[key])
+		}, 400)
+	}
+
+	var cache = newCache(db, getter, { refreshEvery: 5000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
+
+	function makeRequest(key, expected) {
+		return function(done) {
+			cache.get(key, function(err, value) {
+				t.notOk(err, "no error")
+				t.equal(expected, value, "value was " + expected + " as expected")
+				done()
+			})
+		}
+	}
+
+	ASQ().gate(makeRequest('source2', 'two'),
+		makeRequest('source2', 'two'),
+		makeRequest('source2', 'two'),
+		makeRequest('source2', 'two')).then(function(done) {
+			cache.stop()
+			t.end()
+			done()
+		})
 })

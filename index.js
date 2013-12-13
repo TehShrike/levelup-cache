@@ -74,7 +74,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	}
 
 	cache.stop = stop
-	cache.get = function getFromCache(key, cb) {
+	cache.get = function get(key, cb) {
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {
 				getRemoteValue(key, cb)
@@ -84,6 +84,10 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 			}
 		})
 	}
+	cache.getLocal = function getLocal(key, cb) {
+		items.get(key, cb)
+	}
+	cache.refresh = getRemoteValue
 
 	return cache
 }
