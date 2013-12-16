@@ -12,7 +12,8 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	options = {
 		refreshEvery: options.refreshEvery || 12 * 60 * 60 * 1000,
 		checkToSeeIfItemsNeedToBeRefreshedEvery: options.checkToSeeIfItemsNeedToBeRefreshedEvery || 1000,
-		ttl: (options.ttl || 7 * 24 * 60 * 60 * 1000) // SEVEN DAYS OH MAN
+		ttl: (options.ttl || 7 * 24 * 60 * 60 * 1000), // SEVEN DAYS OH MAN
+		comparison: options.comparison || function defaultComparison(a, b) { return a === b }
 	}
 
 	var db = sublevel(levelUpDb)
@@ -46,16 +47,25 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 		if (!sequence) {
 			sequence = ASQ(function(done) {
-				getter(key, function(err, value) {
-					// Make sure the sequence wasn't pulled out from under us
-					if (!err && currentlyRefreshing.has(key)) {
-						items.put(key, value)
-						itemExpirer.touch(key)
-						refreshTimestamps.touch(key)
+				getter(key, function(remoteError, value) {
+					items.get(key, function(localError, previousValue) {
+						if (localError) {
+							previousValue = undefined
+						}
+						// Make sure the sequence wasn't pulled out from under us
+						if (!remoteError && currentlyRefreshing.has(key)) {
+							items.put(key, value)
+							itemExpirer.touch(key)
+							refreshTimestamps.touch(key)
 
-						cache.emit('loaded', key, value)
-					}
-					done(err, value)
+							cache.emit('loaded', key, value)
+
+							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+								cache.emit('changed', key, value, previousValue)
+							}
+						}
+						done(remoteError, value)
+					})
 				})
 			})
 			currentlyRefreshing.set(key, sequence)

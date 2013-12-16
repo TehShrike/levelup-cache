@@ -84,3 +84,89 @@ test("Only expired values are reloaded", function(t) {
 		t.end()
 	}, 1500)
 })
+
+test("'Changed' events fired once for new values", function(t) {
+	var source = {
+		source1: "one",
+		source2: "two"
+	}
+
+	function getter(key, cb) {
+		setTimeout(function() {
+			cb(false, source[key])
+		}, 1)
+	}
+
+	var cache = newCache(levelmem(), getter, { refreshEvery: 100, checkToSeeIfItemsNeedToBeRefreshedEvery: 5 })
+
+	t.plan(7)
+
+	cache.once('changed', function(key, newValue, oldValue) {
+		t.equal('source2', key, "key was source2")
+		t.equal('two', newValue, "value is one")
+		t.equal(undefined, oldValue, "value was undefined")
+
+		var eventEmitted = false
+		cache.on('changed', function(key, newValue, oldValue) {
+			t.notOk(eventEmitted, "Event was not emitted before")
+			eventEmitted = true
+			t.equal('source2', key, "key is correct: " + key)
+			t.equal('three', newValue, "new value is correct: " + newValue)
+			t.equal('two', oldValue, "old value is correct:" + oldValue)
+		})
+	})
+
+	cache.refresh('source2')
+
+	setTimeout(function() {
+		source.source2 = 'three'
+	}, 350)
+
+	setTimeout(function() {
+		cache.stop()
+		t.end()
+	}, 900)
+})
+
+test("'Changed' events firing with custom comparison function", function(t) {
+	var source = {
+		source1: { id: 1, name: "one" },
+		source2: { id: 2, name: "two" }
+	}
+
+	function getter(key, cb) {
+		setTimeout(function() {
+			cb(false, source[key])
+		}, 1)
+	}
+
+	var cache = newCache(levelmem('no location', { valueEncoding: 'json' }), getter, {
+		refreshEvery: 100,
+		checkToSeeIfItemsNeedToBeRefreshedEvery: 5,
+		comparison: function testComparison(a, b) {
+			return a.id === b.id && a.name === b.name
+		}
+	})
+
+	t.plan(4)
+
+	cache.get('source1', function() {
+		var happenedAlready = false
+		cache.on('changed', function(key, newValue, oldValue) {
+			t.notOk(happenedAlready)
+			happenedAlready = true
+			t.equal('source1', key, 'Key is source1')
+			t.equal("something different", newValue.name, "New value's name is correct")
+			t.equal(1, newValue.id, "New value's id is 1")
+		})
+	})
+
+	setTimeout(function() {
+		source.source1.name = "something different"
+	}, 250)
+
+	setTimeout(function() {
+		cache.stop()
+		t.end()
+	}, 350)
+})
