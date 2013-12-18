@@ -61,19 +61,19 @@ test('race condition: dropping an item from the cache while it is still being re
 		t.notOk(err, "no error")
 		t.equal('first', value1, "correct value1 for first check")
 
-		cache.once('loaded', function(key, value2) {
+		cache.once('load', function(key, value2) {
 			t.notOk(true, "The item should never finish loading")
 		})
 
 		setTimeout(function() {
-			cache.removeAllListeners('loaded')
+			cache.removeAllListeners('load')
 
 			value = "second"
 
-			cache.once('loaded', function(key, value3) {
+			cache.once('load', function(key, value3) {
 				t.equal('key', key, 'blurgh key')
 				t.equal('second', value3, "correct value3 for second check")
-				cache.on('loaded', function() {
+				cache.on('load', function() {
 					t.notOk(true, "Shouldn't be fired again!")
 				})
 			})
@@ -89,4 +89,44 @@ test('race condition: dropping an item from the cache while it is still being re
 			}, 1050) // The above tests should succeed in ~1000ms, and another refresh should fire ~100ms after that
 		}, 2000)
 	})
+})
+
+test('items are dropped from the cache even if refreshed recently', function(t) {
+	var db = levelmem()
+
+	var source = {
+		source1: "one",
+		source2: "two"
+	}
+
+	var timesAccessed = 0
+	function getter(key, cb) {
+		timesAccessed = timesAccessed + 1
+		process.nextTick(function() {
+			cb(false, source[key])
+		})
+	}
+
+	var cache = newCache(db, getter, {
+		refreshEvery: 5,
+		checkToSeeIfItemsNeedToBeRefreshedEvery: 5,
+		ttl: 200
+	})
+
+	cache.refresh('source1')
+
+	setTimeout(function() {
+		timesAccessed = 0
+	}, 210)
+
+	setTimeout(function() {
+		// The value should have only been accessed once since we reset the counter at 220ms
+		// since the key should have been dropped from the cache at around 200ms
+		cache.get('source1', function(err, value) {
+			t.equal(timesAccessed, 1, 'Getter was called once since the reset')
+			cache.stop()
+			t.end()
+		})
+
+	}, 300)
 })

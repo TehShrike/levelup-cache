@@ -39,11 +39,11 @@ test("Values and expirations persist across instantiations via levelup", functio
 		t.plan(4)
 
 		// source1 will need to be loaded from the server, but source2 was just loaded, it should be grabbed from the levelup store
-		cache.once('loaded', function(key, value) {
+		cache.once('load', function(key, value) {
 			t.equal('source1', key, 'event fired for source1')
 			t.equal("HAHA NEW VALUE", value, 'The new value was found')
 
-			cache.on('loaded', function(key, value) {
+			cache.on('load', function(key, value) {
 				t.notOk(true, 'The loaded event should not be fired again, all further lookups should come from the cache.  (fired for ' + key + ' with ' + value + ')')
 			})
 			done(cache)

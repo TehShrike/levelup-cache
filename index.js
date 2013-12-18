@@ -49,19 +49,15 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 			sequence = ASQ(function(done) {
 				getter(key, function(remoteError, value) {
 					items.get(key, function(localError, previousValue) {
-						if (localError) {
-							previousValue = undefined
-						}
 						// Make sure the sequence wasn't pulled out from under us
 						if (!remoteError && currentlyRefreshing.has(key)) {
 							items.put(key, value)
-							itemExpirer.touch(key)
 							refreshTimestamps.touch(key)
 
-							cache.emit('loaded', key, value)
+							cache.emit('load', key, value)
 
 							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-								cache.emit('changed', key, value, previousValue)
+								cache.emit('change', key, value, previousValue)
 							}
 						}
 						done(remoteError, value)
@@ -83,11 +79,20 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		}
 	}
 
+	function touchAndLoad(key, cb) {
+		getRemoteValue(key, function(err, value) {
+			itemExpirer.touch(key)
+			if (typeof cb === 'function') {
+				cb(err, value)
+			}
+		})
+	}
+
 	cache.stop = stop
 	cache.get = function get(key, cb) {
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {
-				getRemoteValue(key, cb)
+				touchAndLoad(key, cb)
 			} else if (cb) {
 				itemExpirer.touch(key)
 				cb(err, value)
@@ -95,9 +100,10 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		})
 	}
 	cache.getLocal = function getLocal(key, cb) {
+		itemExpirer.touch(key)
 		items.get(key, cb)
 	}
-	cache.refresh = getRemoteValue
+	cache.refresh = touchAndLoad
 
 	return cache
 }

@@ -24,7 +24,7 @@ test("Events are emitted when values are reloaded", function(t) {
 
 	var responsesReceived = 0
 	var eventsEmitted = 0
-	cache.on('loaded', function(key, newValue) {
+	cache.on('load', function(key, newValue) {
 		t.ok(key === 'source1' || key === 'source2', "The reload event key was an acceptable string")
 		t.ok(newValue === 'one' || newValue === 'two', "The reload value was an acceptable string")
 	})
@@ -71,7 +71,7 @@ test("Only expired values are reloaded", function(t) {
 			t.equal('two', value, "source2's value was retrieved correctly")
 			source.source1 = "a new value!"
 
-			cache.on('loaded', function(key, newValue) {
+			cache.on('load', function(key, newValue) {
 				t.equal('source1', key, 'key is source1')
 				t.equal("a new value!", newValue, 'value is the new updated value')
 			})
@@ -85,7 +85,7 @@ test("Only expired values are reloaded", function(t) {
 	}, 1500)
 })
 
-test("'Changed' events fired once for new values", function(t) {
+test("'Change' events fired once for new values", function(t) {
 	var source = {
 		source1: "one",
 		source2: "two"
@@ -101,13 +101,13 @@ test("'Changed' events fired once for new values", function(t) {
 
 	t.plan(7)
 
-	cache.once('changed', function(key, newValue, oldValue) {
+	cache.once('change', function(key, newValue, oldValue) {
 		t.equal('source2', key, "key was source2")
 		t.equal('two', newValue, "value is one")
 		t.equal(undefined, oldValue, "value was undefined")
 
 		var eventEmitted = false
-		cache.on('changed', function(key, newValue, oldValue) {
+		cache.on('change', function(key, newValue, oldValue) {
 			t.notOk(eventEmitted, "Event was not emitted before")
 			eventEmitted = true
 			t.equal('source2', key, "key is correct: " + key)
@@ -128,7 +128,7 @@ test("'Changed' events fired once for new values", function(t) {
 	}, 900)
 })
 
-test("'Changed' events firing with custom comparison function", function(t) {
+test("'Change' events firing with custom comparison function", function(t) {
 	var source = {
 		source1: { id: 1, name: "one" },
 		source2: { id: 2, name: "two" }
@@ -152,7 +152,7 @@ test("'Changed' events firing with custom comparison function", function(t) {
 
 	cache.get('source1', function() {
 		var happenedAlready = false
-		cache.on('changed', function(key, newValue, oldValue) {
+		cache.on('change', function(key, newValue, oldValue) {
 			t.notOk(happenedAlready)
 			happenedAlready = true
 			t.equal('source1', key, 'Key is source1')
