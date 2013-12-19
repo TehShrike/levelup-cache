@@ -117,9 +117,13 @@ test('items are dropped from the cache even if refreshed recently', function(t) 
 
 	setTimeout(function() {
 		timesAccessed = 0
-	}, 210)
+	}, 220)
+
+	t.plan(2)
 
 	setTimeout(function() {
+		t.equal(timesAccessed, 0, 'Getter has not been called since the reset')
+
 		// The value should have only been accessed once since we reset the counter at 220ms
 		// since the key should have been dropped from the cache at around 200ms
 		cache.get('source1', function(err, value) {

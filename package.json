@@ -17,7 +17,7 @@
 		"stringmap": "~0.2.2",
 		"level-sublevel": "~5.2.0",
 		"asynquence": "~0.1.1-a",
-		"expire-unused-keys": "~0.2.0"
+		"expire-unused-keys": "~0.2.1"
 	},
 	"peerDependencies": {
 		"level-sublevel": ">=5.2.0",

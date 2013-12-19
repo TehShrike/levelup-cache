@@ -79,31 +79,31 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		}
 	}
 
-	function touchAndLoad(key, cb) {
-		getRemoteValue(key, function(err, value) {
+	function wrapCallbackWithAnExpirationTouch(key, cb) {
+		return function(err, value) {
 			itemExpirer.touch(key)
 			if (typeof cb === 'function') {
 				cb(err, value)
 			}
-		})
+		}
 	}
 
 	cache.stop = stop
 	cache.get = function get(key, cb) {
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {
-				touchAndLoad(key, cb)
+				getRemoteValue(key, wrapCallbackWithAnExpirationTouch(key, cb))
 			} else if (cb) {
-				itemExpirer.touch(key)
-				cb(err, value)
+				wrapCallbackWithAnExpirationTouch(key, cb)(err, value)
 			}
 		})
 	}
 	cache.getLocal = function getLocal(key, cb) {
-		itemExpirer.touch(key)
-		items.get(key, cb)
+		items.get(key, wrapCallbackWithAnExpirationTouch(key, cb))
 	}
-	cache.refresh = touchAndLoad
+	cache.refresh = function refresh(key, cb) {
+		getRemoteValue(key, wrapCallbackWithAnExpirationTouch(key, cb))
+	}
 
 	return cache
 }
