@@ -18,8 +18,8 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 	var db = sublevel(levelUpDb)
 	var items = db.sublevel('items')
-	var itemExpirer = new Expirer(options.ttl, db.sublevel('item-expirations'), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
-	var refreshTimestamps = new Expirer(options.refreshEvery, db.sublevel('refresh'), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var itemExpirer = new Expirer(options.ttl, db.sublevel('item-expirations', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var refreshTimestamps = new Expirer(options.refreshEvery, db.sublevel('refresh', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
 	var currentlyRefreshing = new StringMap()
 	var cache = new EventEmitter()
 
