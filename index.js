@@ -3,18 +3,17 @@ var sublevel = require('level-sublevel')
 var ASQ = require('asynquence')
 var EventEmitter = require('events').EventEmitter
 var Expirer = require('expire-unused-keys')
+var extend = require('extend')
 
 module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
-	"use strict"
-
 	options = options || {}
 
-	options = {
-		refreshEvery: options.refreshEvery || 12 * 60 * 60 * 1000,
-		checkToSeeIfItemsNeedToBeRefreshedEvery: options.checkToSeeIfItemsNeedToBeRefreshedEvery || 1000,
-		ttl: (options.ttl || 7 * 24 * 60 * 60 * 1000), // SEVEN DAYS OH MAN
-		comparison: options.comparison || function defaultComparison(a, b) { return a === b }
-	}
+	options = extend({
+		refreshEvery: 12 * 60 * 60 * 1000,
+		checkToSeeIfItemsNeedToBeRefreshedEvery: 1000,
+		ttl: 7 * 24 * 60 * 60 * 1000, // SEVEN DAYS OH MAN
+		comparison: function defaultComparison(a, b) { return a === b }
+	}, options)
 
 	var db = sublevel(levelUpDb)
 	var items = db.sublevel('items')
