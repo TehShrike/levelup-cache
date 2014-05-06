@@ -170,3 +170,25 @@ test("'Change' events firing with custom comparison function", function(t) {
 		t.end()
 	}, 350)
 })
+
+test("Doesn't emit any events on shutdown", function(t) {
+	function getter(key, cb) {
+		setTimeout(cb.bind(null, null, 'meh'), 5)
+	}
+
+	var cache = newCache(levelmem(), getter, { refreshEvery: 1000, checkToSeeIfItemsNeedToBeRefreshedEvery: 10 })
+
+	cache.get('bluh', function(err, value) {
+		t.notOk(err, 'No errors')
+		t.equals(value, 'meh', 'meh is meh')
+
+		cache.on('change', function() {
+			t.notOk(true, 'No events fired')
+		})
+
+		setTimeout(function() {
+			cache.stop()
+			t.end()
+		}, 3500)
+	})
+})
