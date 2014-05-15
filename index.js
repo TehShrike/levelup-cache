@@ -50,14 +50,14 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 					items.get(key, function(localError, previousValue) {
 						// Make sure the sequence wasn't pulled out from under us
 						if (!remoteError && currentlyRefreshing.has(key)) {
-							items.put(key, value)
+							items.put(key, value, function() {
+								cache.emit('load', key, value)
+
+								if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+									cache.emit('change', key, value, previousValue)
+								}
+							})
 							refreshTimestamps.touch(key)
-
-							cache.emit('load', key, value)
-
-							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-								cache.emit('change', key, value, previousValue)
-							}
 						}
 						done(remoteError, value)
 					})

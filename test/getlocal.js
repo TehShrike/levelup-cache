@@ -25,7 +25,6 @@ test("Getting cached value", function(t) {
 	var cache = newCache(db, getter, { refreshEvery: 10000, checkToSeeIfItemsNeedToBeRefreshedEvery: 1000 })
 
 	cache.get('source2', function(err, value) {
-		console.log(err)
 		t.notOk(err, "No error while fetching source2")
 		source.source2 = 'something else'
 		cache.getLocal('source2', function(err, value) {
@@ -38,5 +37,28 @@ test("Getting cached value", function(t) {
 			})
 
 		})
+	})
+})
+
+test("Don't release Zalgo on getLocal calls", function(t) {
+	var db = levelmem()
+
+	function getter(key, cb) {
+		setTimeout(function() {
+			cb(null, "yup")
+		}, 10)
+	}
+
+	var cache = newCache(db, getter, { refreshEvery: 10000, checkToSeeIfItemsNeedToBeRefreshedEvery: 1000 })
+
+	cache.get('source', function(err, value) {
+		var getLocalHasReturned = false
+		cache.getLocal('source', function(err, value) {
+			t.equal('yup', value, 'getLocal returns the cached value')
+			t.ok(getLocalHasReturned, "the getLocal call has returned")
+			t.end()
+			cache.stop()
+		})
+		getLocalHasReturned = true
 	})
 })
