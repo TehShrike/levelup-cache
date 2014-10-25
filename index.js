@@ -44,6 +44,8 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	function getRemoteValue(key, cb) {
 		var sequence = currentlyRefreshing.get(key)
 
+		refreshTimestamps.touch(key)
+
 		if (!sequence) {
 			sequence = ASQ(function(done) {
 				getter(key, function(remoteError, value) {
@@ -57,7 +59,6 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 									cache.emit('change', key, value, previousValue)
 								}
 							})
-							refreshTimestamps.touch(key)
 						}
 						done(remoteError, value)
 					})

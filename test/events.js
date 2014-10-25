@@ -22,8 +22,6 @@ test("Events are emitted when values are reloaded", function(t) {
 	var responseCalls = 3
 	t.plan(eventCalls + responseCalls)
 
-	var responsesReceived = 0
-	var eventsEmitted = 0
 	cache.on('load', function(key, newValue) {
 		t.ok(key === 'source1' || key === 'source2', "The reload event key was an acceptable string")
 		t.ok(newValue === 'one' || newValue === 'two', "The reload value was an acceptable string")
