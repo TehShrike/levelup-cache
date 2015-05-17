@@ -1,4 +1,4 @@
-var test = require("tap").test
+var test = require('tape')
 var newCache = require("../")
 var levelmem = require('level-mem')
 
@@ -39,7 +39,7 @@ test("Events are emitted when values are reloaded", function(t) {
 	setTimeout(function() {
 		cache.stop()
 		t.end()
-	}, 2100) // The values should have been reloaded after the second check around ~2020 ms
+	}, 1500) // The values should have been reloaded after the second check around ~2020 ms
 })
 
 test("Only expired values are reloaded", function(t) {

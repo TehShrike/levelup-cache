@@ -1,4 +1,4 @@
-var test = require("tap").test
+var test = require('tape')
 var newCache = require("../")
 var levelmem = require('level-mem')
 var ASQ = require('asynquence')

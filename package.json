@@ -7,18 +7,18 @@
     "test": "test"
   },
   "devDependencies": {
-    "tap": "~0.4.4",
-    "level-mem": "~0.18.0"
+    "level-mem": "~0.18.0",
+    "tape": "^4.0.0"
   },
   "scripts": {
-    "test": "tap ./test"
+    "test": "tape ./test/*.js"
   },
   "dependencies": {
     "stringmap": "~0.2.2",
-    "level-sublevel": "~5.2.0",
-    "asynquence": "~0.1.1-a",
-    "expire-unused-keys": "^1.0.0",
-    "extend": "~1.2.1"
+    "level-sublevel": "~6.4.6",
+    "asynquence": "~0.6.0-b",
+    "expire-unused-keys": "^1.0.4",
+    "extend": "~2.0.1"
   },
   "repository": {
     "type": "git",

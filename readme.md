@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/TehShrike/levelup-cache.svg)](https://travis-ci.org/TehShrike/levelup-cache)
+
 Use a [LevelUP](https://github.com/rvagg/node-levelup) database to cache remote data from somewhere else - data that you'll want to automatically reload every so often.
 
 Just provide a getter function and a LevelUP store, and you're good to go.

@@ -6,6 +6,7 @@ var Expirer = require('expire-unused-keys')
 var extend = require('extend')
 
 module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
+	var stopped = false
 	options = options || {}
 
 	options = extend({
@@ -48,24 +49,25 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 		if (!sequence) {
 			sequence = ASQ(function(done) {
-				getter(key, function(remoteError, value) {
-					items.get(key, function(localError, previousValue) {
-						// Make sure the sequence wasn't pulled out from under us
-						if (!remoteError && currentlyRefreshing.has(key)) {
-							items.put(key, value, function() {
-								cache.emit('load', key, value)
-
-								if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-									cache.emit('change', key, value, previousValue)
-								}
-							})
-						}
-						done(remoteError, value)
-					})
-				})
+				getter(key, done)
 			})
 			currentlyRefreshing.set(key, sequence)
+
 			sequence.then(function(done, err, value) {
+				items.get(key, function(localError, previousValue) {
+					// Make sure the sequence wasn't pulled out from under us
+					if (!err && currentlyRefreshing.has(key) && !stopped) {
+						items.put(key, value, function() {
+							cache.emit('load', key, value)
+
+							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+								cache.emit('change', key, value, previousValue)
+							}
+						})
+					}
+					done(err, value)
+				})
+			}).then(function(done, err, value) {
 				currentlyRefreshing.remove(key)
 				done(err, value)
 			})
@@ -88,7 +90,10 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		}
 	}
 
-	cache.stop = stop
+	cache.stop = function() {
+		stop()
+		stopped = true
+	}
 	cache.get = function get(key, cb) {
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {

@@ -1,4 +1,4 @@
-var test = require("tap").test
+var test = require('tape')
 var newCache = require("../")
 var levelmem = require('level-mem')
 
@@ -52,7 +52,7 @@ test('race condition: dropping an item from the cache while it is still being re
 	var cache = newCache(db, getter, {
 		refreshEvery: 100,
 		checkToSeeIfItemsNeedToBeRefreshedEvery: 5,
-		ttl: 200
+		ttl: 150
 	})
 
 	// The first refresh will still be running when the ttl expires
