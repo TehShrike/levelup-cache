@@ -6,6 +6,8 @@ Just provide a getter function and a LevelUP store, and you're good to go.
 
 Tests are welcome, as are small features.  Add a Github issue or something with thoughts.
 
+**Breaking version change:** levelup-cache 2.0.0 uses [subleveldown](https://www.npmjs.com/package/subleveldown) instead of [sublevel 5.x](https://www.npmjs.com/package/sublevel).
+
 # Priorities/features
 
 Why use this library instead of something else like [level-ttl-cache](https://github.com/rvagg/level-ttl-cache)?  This module has a few specific priorities in mind not met by any module I stumbled on while I was looking:

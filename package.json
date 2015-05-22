@@ -14,11 +14,11 @@
     "test": "tape ./test/*.js"
   },
   "dependencies": {
-    "stringmap": "~0.2.2",
-    "level-sublevel": "~6.4.6",
     "asynquence": "~0.6.0-b",
     "expire-unused-keys": "^1.0.4",
-    "extend": "~2.0.1"
+    "extend": "~2.0.1",
+    "stringmap": "~0.2.2",
+    "subleveldown": "^2.0.0"
   },
   "repository": {
     "type": "git",

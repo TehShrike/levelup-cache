@@ -142,7 +142,7 @@ test("'Change' events firing with custom comparison function", function(t) {
 		refreshEvery: 100,
 		checkToSeeIfItemsNeedToBeRefreshedEvery: 5,
 		comparison: function testComparison(a, b) {
-			return a.id === b.id && a.name === b.name
+			return a && b && a.id === b.id && a.name === b.name
 		}
 	})
 
@@ -156,6 +156,9 @@ test("'Change' events firing with custom comparison function", function(t) {
 			t.equal('source1', key, 'Key is source1')
 			t.equal("something different", newValue.name, "New value's name is correct")
 			t.equal(1, newValue.id, "New value's id is 1")
+
+			cache.stop()
+			t.end()
 		})
 	})
 
@@ -163,10 +166,7 @@ test("'Change' events firing with custom comparison function", function(t) {
 		source.source1.name = "something different"
 	}, 250)
 
-	setTimeout(function() {
-		cache.stop()
-		t.end()
-	}, 350)
+	t.timeoutAfter(5000)
 })
 
 test("Doesn't emit any events on shutdown", function(t) {

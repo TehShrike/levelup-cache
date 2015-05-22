@@ -1,5 +1,5 @@
 var StringMap = require('stringmap')
-var sublevel = require('level-sublevel')
+var sub = require('subleveldown')
 var ASQ = require('asynquence')
 var EventEmitter = require('events').EventEmitter
 var Expirer = require('expire-unused-keys')
@@ -16,10 +16,9 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		comparison: function defaultComparison(a, b) { return a === b }
 	}, options)
 
-	var db = sublevel(levelUpDb)
-	var items = db.sublevel('items')
-	var itemExpirer = new Expirer(options.ttl, db.sublevel('item-expirations', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
-	var refreshTimestamps = new Expirer(options.refreshEvery, db.sublevel('refresh', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var items = levelUpDb
+	var itemExpirer = new Expirer(options.ttl, sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var refreshTimestamps = new Expirer(options.refreshEvery, sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
 	var currentlyRefreshing = new StringMap()
 	var cache = Object.create(new EventEmitter())
 
