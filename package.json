@@ -7,18 +7,18 @@
     "test": "test"
   },
   "devDependencies": {
+    "asynquence": "0.8.2",
+    "faucet": "0.0.1",
     "level-mem": "~0.18.0",
     "tape": "^4.0.0"
   },
   "scripts": {
-    "test": "tape ./test/*.js"
+    "test": "tape ./test/*.js | faucet"
   },
   "dependencies": {
-    "asynquence": "~0.6.0-b",
     "expire-unused-keys": "^1.0.4",
-    "extend": "~2.0.1",
-    "stringmap": "~0.2.2",
-    "subleveldown": "^2.0.0"
+    "subleveldown": "^2.0.0",
+    "xtend": "4.0.0"
   },
   "repository": {
     "type": "git",
