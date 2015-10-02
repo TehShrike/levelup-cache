@@ -1,9 +1,7 @@
-var StringMap = require('stringmap')
 var sub = require('subleveldown')
-var ASQ = require('asynquence')
 var EventEmitter = require('events').EventEmitter
 var Expirer = require('expire-unused-keys')
-var extend = require('extend')
+var extend = require('xtend')
 
 module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
 	var stopped = false
@@ -19,8 +17,8 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	var items = levelUpDb
 	var itemExpirer = new Expirer(options.ttl, sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
 	var refreshTimestamps = new Expirer(options.refreshEvery, sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
-	var currentlyRefreshing = new StringMap()
-	var cache = Object.create(new EventEmitter())
+	var currentlyRefreshing = {}
+	var cache = new EventEmitter()
 
 	refreshTimestamps.on('expire', getRemoteValue)
 	itemExpirer.on('expire', expireItem)
@@ -28,55 +26,62 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	function stop() {
 		refreshTimestamps.stop()
 		itemExpirer.stop()
+		stopped = true
 	}
 
 	function expireItem(key) {
 		items.del(key)
 		refreshTimestamps.forget(key)
-		var inTheMidstOfRefreshing = currentlyRefreshing.get(key)
+		var inTheMidstOfRefreshing = currentlyRefreshing[key]
 		if (inTheMidstOfRefreshing) {
-			inTheMidstOfRefreshing.abort()
-			currentlyRefreshing.remove(key)
+			delete currentlyRefreshing[key]
 		}
 	}
 
 	// A getRemoteValue call without a callback function refreshes the cached value
 	function getRemoteValue(key, cb) {
-		var sequence = currentlyRefreshing.get(key)
-
 		refreshTimestamps.touch(key)
 
-		if (!sequence) {
-			sequence = ASQ(function(done) {
-				getter(key, done)
-			})
-			currentlyRefreshing.set(key, sequence)
+		if (!currentlyRefreshing[key]) {
+			currentlyRefreshing[key] = []
 
-			sequence.then(function(done, err, value) {
+			function complete(err, value) {
+				if (currentlyRefreshing[key] && !stopped) {
+					currentlyRefreshing[key].forEach(function(cb) {
+						process.nextTick(function() {
+							cb(err, value)
+						})
+					})
+				}
+				delete currentlyRefreshing[key]
+			}
+
+			getter(key, function(err, value) {
+
 				items.get(key, function(localError, previousValue) {
-					// Make sure the sequence wasn't pulled out from under us
-					if (!err && currentlyRefreshing.has(key) && !stopped) {
-						items.put(key, value, function() {
-							cache.emit('load', key, value)
+					if (err) {
+						return complete(err)
+					}
 
-							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-								cache.emit('change', key, value, previousValue)
+					if (!err && currentlyRefreshing[key] && !stopped) {
+						items.put(key, value, function() {
+							if (currentlyRefreshing[key] && !stopped) {
+								cache.emit('load', key, value)
+
+								if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+									cache.emit('change', key, value, previousValue)
+								}
+								complete(err, value)
 							}
 						})
 					}
-					done(err, value)
 				})
-			}).then(function(done, err, value) {
-				currentlyRefreshing.remove(key)
-				done(err, value)
+
 			})
 		}
 
 		if (typeof cb === 'function') {
-			sequence.then(function(done, err, value) {
-				cb(err, value)
-				done(err, value)
-			})
+			currentlyRefreshing[key].push(cb)
 		}
 	}
 
@@ -89,10 +94,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		}
 	}
 
-	cache.stop = function() {
-		stop()
-		stopped = true
-	}
+	cache.stop = stop
 	cache.get = function get(key, cb) {
 		items.get(key, function(err, value) {
 			if (err && err.notFound) {
