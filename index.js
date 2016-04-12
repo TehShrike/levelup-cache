@@ -15,8 +15,17 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	}, options)
 
 	var items = levelUpDb
-	var itemExpirer = new Expirer(options.ttl, sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
-	var refreshTimestamps = new Expirer(options.refreshEvery, sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }), options.checkToSeeIfItemsNeedToBeRefreshedEvery)
+	var itemExpirer = new Expirer({
+		db: sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }),
+		timeoutMs: options.ttl,
+		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery
+	})
+	var refreshTimestamps = new Expirer({
+		db: sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }),
+		timeoutMs: options.refreshEvery,
+		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery,
+		repeatExpirations: true
+	})
 	var currentlyRefreshing = {}
 	var cache = new EventEmitter()
 
@@ -87,6 +96,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 	function wrapCallbackWithAnExpirationTouch(key, cb) {
 		return function(err, value) {
+			refreshTimestamps.createIfNotExists(key)
 			itemExpirer.touch(key)
 			if (typeof cb === 'function') {
 				cb(err, value)
