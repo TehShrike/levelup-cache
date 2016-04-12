@@ -96,10 +96,8 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 	function wrapCallbackWithAnExpirationTouch(key, cb) {
 		return function(err, value) {
-			if (!err) {
-				refreshTimestamps.createIfNotExists(key)
-				itemExpirer.touch(key)
-			}
+			refreshTimestamps.createIfNotExists(key)
+			itemExpirer.touch(key)
 			if (typeof cb === 'function') {
 				cb(err, value)
 			}
