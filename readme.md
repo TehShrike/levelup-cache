@@ -121,6 +121,12 @@ About the same as that last function, except that if the value isn't in the loca
 
 Causes the cache to call the getter and store the found value, no matter how fresh the currently stored value is (or if there was a currently stored value for that key at all).
 
+### clearKey(key, [cb])
+
+Clears any value associated with the given key from the cache.  Also clears any stored timing/refresh information.
+
+This is the same action that happens when a key in the cache expires naturally.
+
 ### stop
 
 Stops any timeouts currently floating around, so that your process can exit without you having to get all kill-happy on it.

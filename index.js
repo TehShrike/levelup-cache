@@ -2,6 +2,10 @@ var sub = require('subleveldown')
 var EventEmitter = require('events').EventEmitter
 var Expirer = require('expire-unused-keys')
 var extend = require('xtend')
+var each = require('async-each')
+
+function noop() {}
+function run(fn, cb) { fn(cb) }
 
 module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
 	var stopped = false
@@ -38,13 +42,16 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		stopped = true
 	}
 
-	function expireItem(key) {
-		items.del(key)
-		refreshTimestamps.forget(key)
+	function expireItem(key, cb) {
 		var inTheMidstOfRefreshing = currentlyRefreshing[key]
 		if (inTheMidstOfRefreshing) {
 			delete currentlyRefreshing[key]
 		}
+
+		each([
+			items.del.bind(items, key),
+			refreshTimestamps.forget.bind(refreshTimestamps, key)
+		], run, cb || noop)
 	}
 
 	// A getRemoteValue call without a callback function refreshes the cached value
@@ -120,6 +127,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 	cache.refresh = function refresh(key, cb) {
 		getRemoteValue(key, wrapCallbackWithAnExpirationTouch(key, cb))
 	}
+	cache.clearKey = expireItem
 
 	return cache
 }
