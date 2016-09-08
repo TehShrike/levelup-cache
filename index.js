@@ -1,17 +1,16 @@
-var sub = require('subleveldown')
-var EventEmitter = require('events').EventEmitter
-var Expirer = require('expire-unused-keys')
-var extend = require('xtend')
-var each = require('async-each')
-var gateKeeper = require('gate-keeper')
-var makeMap = require('key-master')
+const sub = require('subleveldown')
+const EventEmitter = require('events').EventEmitter
+const Expirer = require('expire-unused-keys')
+const extend = require('xtend')
+const each = require('async-each')
+const gateKeeper = require('gate-keeper')
+const makeMap = require('key-master')
 
 function noop() {}
 function run(fn, cb) { fn(cb) }
 
-module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
-	var stopped = false
-	options = options || {}
+module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options = {}) {
+	let stopped = false
 
 	options = extend({
 		refreshEvery: 12 * 60 * 60 * 1000,
@@ -20,19 +19,19 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		comparison: function defaultComparison(a, b) { return a === b }
 	}, options)
 
-	var items = levelUpDb
-	var itemExpirer = new Expirer({
+	const items = levelUpDb
+	const itemExpirer = new Expirer({
 		db: sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }),
 		timeoutMs: options.ttl,
 		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery
 	})
-	var refreshTimestamps = new Expirer({
+	const refreshTimestamps = new Expirer({
 		db: sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }),
 		timeoutMs: options.refreshEvery,
 		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery,
 		repeatExpirations: true
 	})
-	var refreshers = makeMap(function(key) {
+	const refreshers = makeMap(function(key) {
 		return gateKeeper(function(cb) {
 			refreshTimestamps.touch(key)
 			getter(key, function(err, value) {
@@ -56,7 +55,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 			})
 		})
 	})
-	var cache = new EventEmitter()
+	const cache = new EventEmitter()
 
 	refreshTimestamps.on('expire', getRemoteValue)
 	itemExpirer.on('expire', expireItem)
@@ -79,7 +78,7 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 
 	// A getRemoteValue call without a callback function still refreshes the cached value
 	function getRemoteValue(key, cb) {
-		var get = refreshers.get(key)
+		const get = refreshers.get(key)
 
 		get(function complete(err, value) {
 			if (typeof cb === 'function') {
