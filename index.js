@@ -31,30 +31,28 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery,
 		repeatExpirations: true
 	})
-	const refreshers = makeMap(function(key) {
-		return gateKeeper(function(cb) {
-			refreshTimestamps.touch(key)
-			getter(key, function(err, value) {
-				items.get(key, function(localError, previousValue) {
-					if (err) {
-						return cb(err)
-					} else if (!stopped && !cb.isCancelled()) {
-						items.put(key, value, function() {
-							if (!stopped && !cb.isCancelled()) {
-								cache.emit('load', key, value)
+	const refreshers = makeMap(key => gateKeeper(function(cb) {
+		refreshTimestamps.touch(key)
+		getter(key, function(err, value) {
+			items.get(key, function(localError, previousValue) {
+				if (err) {
+					return cb(err)
+				} else if (!stopped && !cb.isCancelled()) {
+					items.put(key, value, function() {
+						if (!stopped && !cb.isCancelled()) {
+							cache.emit('load', key, value)
 
-								if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-									cache.emit('change', key, value, previousValue)
-								}
-								refreshers.delete(key)
-								cb(err, value)
+							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+								cache.emit('change', key, value, previousValue)
 							}
-						})
-					}
-				})
+							refreshers.delete(key)
+							cb(err, value)
+						}
+					})
+				}
 			})
 		})
-	})
+	}))
 	const cache = new EventEmitter()
 
 	refreshTimestamps.on('expire', getRemoteValue)
@@ -66,34 +64,28 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		stopped = true
 	}
 
-	function expireItem(key, cb) {
+	function expireItem(key, cb = noop) {
 		refreshers.get(key).cancel()
 		refreshers.delete(key)
 
 		each([
 			items.del.bind(items, key),
 			refreshTimestamps.forget.bind(refreshTimestamps, key)
-		], run, cb || noop)
+		], run, cb)
 	}
 
 	// A getRemoteValue call without a callback function still refreshes the cached value
-	function getRemoteValue(key, cb) {
+	function getRemoteValue(key, cb = noop) {
 		const get = refreshers.get(key)
 
-		get(function complete(err, value) {
-			if (typeof cb === 'function') {
-				cb(err, value)
-			}
-		})
+		get(cb)
 	}
 
-	function wrapCallbackWithAnExpirationTouch(key, cb) {
+	function wrapCallbackWithAnExpirationTouch(key, cb = noop) {
 		return function(err, value) {
 			refreshTimestamps.createIfNotExists(key)
 			itemExpirer.touch(key)
-			if (typeof cb === 'function') {
-				cb(err, value)
-			}
+			cb(err, value)
 		}
 	}
 
