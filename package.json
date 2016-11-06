@@ -1,6 +1,6 @@
 {
   "name": "levelup-cache",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Use LevelUP to cache remote data",
   "main": "index.js",
   "engines": {
