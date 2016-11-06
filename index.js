@@ -1,15 +1,16 @@
-var sub = require('subleveldown')
-var EventEmitter = require('events').EventEmitter
-var Expirer = require('expire-unused-keys')
-var extend = require('xtend')
-var each = require('async-each')
+const sub = require('subleveldown')
+const EventEmitter = require('events').EventEmitter
+const Expirer = require('expire-unused-keys')
+const extend = require('xtend')
+const each = require('async-each')
+const gateKeeper = require('gate-keeper')
+const makeMap = require('key-master')
 
 function noop() {}
 function run(fn, cb) { fn(cb) }
 
-module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options) {
-	var stopped = false
-	options = options || {}
+module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, options = {}) {
+	let stopped = false
 
 	options = extend({
 		refreshEvery: 12 * 60 * 60 * 1000,
@@ -18,20 +19,41 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		comparison: function defaultComparison(a, b) { return a === b }
 	}, options)
 
-	var items = levelUpDb
-	var itemExpirer = new Expirer({
+	const items = levelUpDb
+	const itemExpirer = new Expirer({
 		db: sub(levelUpDb, 'item-expirations', { valueEncoding: 'utf8' }),
 		timeoutMs: options.ttl,
 		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery
 	})
-	var refreshTimestamps = new Expirer({
+	const refreshTimestamps = new Expirer({
 		db: sub(levelUpDb, 'refresh', { valueEncoding: 'utf8' }),
 		timeoutMs: options.refreshEvery,
 		checkIntervalMs: options.checkToSeeIfItemsNeedToBeRefreshedEvery,
 		repeatExpirations: true
 	})
-	var currentlyRefreshing = {}
-	var cache = new EventEmitter()
+	const refreshers = makeMap(key => gateKeeper(function(cb) {
+		refreshTimestamps.touch(key)
+		getter(key, function(err, value) {
+			items.get(key, function(localError, previousValue) {
+				if (err) {
+					return cb(err)
+				} else if (!stopped && !cb.isCancelled()) {
+					items.put(key, value, function() {
+						if (!stopped && !cb.isCancelled()) {
+							cache.emit('load', key, value)
+
+							if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
+								cache.emit('change', key, value, previousValue)
+							}
+							refreshers.delete(key)
+							cb(err, value)
+						}
+					})
+				}
+			})
+		})
+	}))
+	const cache = new EventEmitter()
 
 	refreshTimestamps.on('expire', getRemoteValue)
 	itemExpirer.on('expire', expireItem)
@@ -42,72 +64,28 @@ module.exports = function turnLevelUPDatabaseIntoACache(levelUpDb, getter, optio
 		stopped = true
 	}
 
-	function expireItem(key, cb) {
-		var inTheMidstOfRefreshing = currentlyRefreshing[key]
-		if (inTheMidstOfRefreshing) {
-			delete currentlyRefreshing[key]
-		}
+	function expireItem(key, cb = noop) {
+		refreshers.get(key).cancel()
+		refreshers.delete(key)
 
 		each([
 			items.del.bind(items, key),
 			refreshTimestamps.forget.bind(refreshTimestamps, key)
-		], run, cb || noop)
+		], run, cb)
 	}
 
-	// A getRemoteValue call without a callback function refreshes the cached value
-	function getRemoteValue(key, cb) {
-		refreshTimestamps.touch(key)
+	// A getRemoteValue call without a callback function still refreshes the cached value
+	function getRemoteValue(key, cb = noop) {
+		const get = refreshers.get(key)
 
-		if (!currentlyRefreshing[key]) {
-			currentlyRefreshing[key] = []
-
-			function complete(err, value) {
-				if (currentlyRefreshing[key] && !stopped) {
-					currentlyRefreshing[key].forEach(function(cb) {
-						process.nextTick(function() {
-							cb(err, value)
-						})
-					})
-				}
-				delete currentlyRefreshing[key]
-			}
-
-			getter(key, function(err, value) {
-
-				items.get(key, function(localError, previousValue) {
-					if (err) {
-						return complete(err)
-					}
-
-					if (!err && currentlyRefreshing[key] && !stopped) {
-						items.put(key, value, function() {
-							if (currentlyRefreshing[key] && !stopped) {
-								cache.emit('load', key, value)
-
-								if ((localError && localError.notFound) || !options.comparison(previousValue, value)) {
-									cache.emit('change', key, value, previousValue)
-								}
-								complete(err, value)
-							}
-						})
-					}
-				})
-
-			})
-		}
-
-		if (typeof cb === 'function') {
-			currentlyRefreshing[key].push(cb)
-		}
+		get(cb)
 	}
 
-	function wrapCallbackWithAnExpirationTouch(key, cb) {
+	function wrapCallbackWithAnExpirationTouch(key, cb = noop) {
 		return function(err, value) {
 			refreshTimestamps.createIfNotExists(key)
 			itemExpirer.touch(key)
-			if (typeof cb === 'function') {
-				cb(err, value)
-			}
+			cb(err, value)
 		}
 	}
 
